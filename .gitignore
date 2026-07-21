@@ -8,8 +8,7 @@
 *.tsbuildinfo
 core.*
 
-# Local planning and unpublished documentation
-/PLAN.md
+# Local unpublished documentation
 /docs/
 /blog/
 
@@ -29,6 +28,7 @@ __pycache__/
 # Neo4j docker volumes
 /docker/neo4j/data/*
 !/docker/neo4j/data/.gitkeep
+/docker/neo4j/data-*/
 /docker/neo4j/logs/*
 !/docker/neo4j/logs/.gitkeep
 

@@ -40,7 +40,7 @@ FOR (record:SourceRecord)
 REQUIRE record.id IS UNIQUE;
 
 // An investigation contains analyst-created work.
-CREATE CONSTRAINT investigation_iid IF NOT EXISTS
+CREATE CONSTRAINT investigation_id IF NOT EXISTS
 FOR (investigation:Investigation)
 REQUIRE investigation.id IS UNIQUE;
 
