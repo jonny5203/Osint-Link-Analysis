@@ -1,0 +1,17 @@
+{
+  "_comment": "Hand-curated entity-resolution fixtures (PLAN.md T6.3). TODO: >=10 pairs in each list.",
+  "known_matches": [
+    {
+      "_comment": "should resolve — TODO add real messy variants (typos, transliterations, missing initials)",
+      "a": { "name": "TODO", "country": "TODO" },
+      "b": { "name": "TODO", "country": "TODO" }
+    }
+  ],
+  "known_nonmatches": [
+    {
+      "_comment": "look similar but distinct — e.g. same name, different country",
+      "a": { "name": "TODO", "country": "TODO" },
+      "b": { "name": "TODO", "country": "TODO" }
+    }
+  ]
+}

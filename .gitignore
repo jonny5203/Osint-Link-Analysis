@@ -1,0 +1,39 @@
+# Secrets / local env
+.env
+
+# Build outputs
+/api/target/
+/web/dist/
+/web/node_modules/
+*.tsbuildinfo
+core.*
+
+# Local planning and unpublished documentation
+/PLAN.md
+/docs/
+/blog/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+
+# Ingest data caches (raw downloads + spaCy models) — keep dir structure, ignore contents
+/ingest/data/raw/
+/ingest/data/news/*
+!/ingest/data/news/.gitkeep
+
+# Neo4j docker volumes
+/docker/neo4j/data/*
+!/docker/neo4j/data/.gitkeep
+/docker/neo4j/logs/*
+!/docker/neo4j/logs/.gitkeep
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

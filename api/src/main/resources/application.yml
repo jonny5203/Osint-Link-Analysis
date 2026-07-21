@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: nexus-api
+  neo4j:
+    uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${SPRING_NEO4J_USERNAME:neo4j}
+      password: ${SPRING_NEO4J_PASSWORD}
+  # GraphiQL playground — enabled when T7 lands the SDL.
+  graphql:
+    graphiql:
+      enabled: true

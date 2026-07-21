@@ -1,0 +1,98 @@
+# Nexus GraphQL schema (PLAN.md T7 reads, T8 mutations).
+# Node properties follow the Neo4j schema in PLAN.md §3.
+
+type Query {
+    search(term: String!, limit: Int = 20): [SearchResult!]!
+    neighbors(id: ID!, limit: Int = 50): [Node!]!
+    shortestPath(fromId: ID!, toId: ID!, maxHops: Int = 6): PathResult
+}
+
+type Mutation {
+    createInvestigation(title: String!): Investigation!
+    addEntity(investigationId: ID!, entityId: ID!, x: Float, y: Float): Investigation!
+    annotate(investigationId: ID!, entityId: ID!, annotation: String!): Investigation!
+    saveLayout(investigationId: ID!, layout: [LayoutItem!]!): Investigation!
+}
+
+interface Node {
+    id: ID!
+    name: String!
+    labels: [String!]!
+}
+
+type Person implements Node {
+    id: ID!
+    name: String!
+    labels: [String!]!
+    dob: String
+    nationality: String
+}
+
+type Organization implements Node {
+    id: ID!
+    name: String!
+    labels: [String!]!
+    registrationNumber: String
+    jurisdiction: String
+}
+
+type Vessel implements Node {
+    id: ID!
+    name: String!
+    labels: [String!]!
+    imo: String
+    flag: String
+    type: String
+}
+
+# Address has no `name` (PLAN.md §3) so it does not implement Node.
+type Address {
+    id: ID!
+    country: String!
+    city: String
+    raw: String
+}
+
+type Source {
+    id: ID!
+    list: String!
+    url: String!
+    retrievedAt: String!
+}
+
+type SearchResult {
+    node: Node!
+    score: Float
+}
+
+type InvestigationEntity {
+    entityId: ID!
+    annotation: String
+    x: Float
+    y: Float
+}
+
+type Investigation {
+    id: ID!
+    title: String!
+    createdAt: String!
+    entities: [InvestigationEntity!]!
+}
+
+input LayoutItem {
+    entityId: ID!
+    x: Float!
+    y: Float!
+}
+
+type PathResult {
+    nodes: [Node!]!
+    edges: [PathEdge!]!
+    length: Int!
+}
+
+type PathEdge {
+    fromId: ID!
+    toId: ID!
+    type: String!
+}
