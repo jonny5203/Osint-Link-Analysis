@@ -1,98 +1,79 @@
-# Nexus GraphQL schema (PLAN.md T7 reads, T8 mutations).
-# Node properties follow the Neo4j schema in PLAN.md §3.
+enum EntityKind { PERSON ORGANIZATION VESSEL ADDRESS }
 
 type Query {
-    search(term: String!, limit: Int = 20): [SearchResult!]!
-    neighbors(id: ID!, limit: Int = 50): [Node!]!
-    shortestPath(fromId: ID!, toId: ID!, maxHops: Int = 6): PathResult
-}
-
-type Mutation {
-    createInvestigation(title: String!): Investigation!
-    addEntity(investigationId: ID!, entityId: ID!, x: Float, y: Float): Investigation!
-    annotate(investigationId: ID!, entityId: ID!, annotation: String!): Investigation!
-    saveLayout(investigationId: ID!, layout: [LayoutItem!]!): Investigation!
-}
-
-interface Node {
+  searchEntities(term: String!, limit: Int = 20): [SearchHit!]!
+  entity(id: ID!): EntityDetail
+  neighborhood(
     id: ID!
-    name: String!
-    labels: [String!]!
+    depth: Int = 1
+    nodeLimit: Int = 100
+    edgeLimit: Int = 200
+  ): GraphSlice!
+  shortestPath(fromId: ID!, toId: ID!, maxHops: Int = 6): GraphSlice
 }
 
-type Person implements Node {
-    id: ID!
-    name: String!
-    labels: [String!]!
-    dob: String
-    nationality: String
+type SearchHit {
+  score: Float!
+  node: GraphNode!
 }
 
-type Organization implements Node {
-    id: ID!
-    name: String!
-    labels: [String!]!
-    registrationNumber: String
-    jurisdiction: String
+type GraphNode {
+  id: ID!
+  kind: EntityKind!
+  displayName: String!
+  aliases: [String!]!
+  sanctioned: Boolean!
+  datasetIds: [ID!]!
 }
 
-type Vessel implements Node {
-    id: ID!
-    name: String!
-    labels: [String!]!
-    imo: String
-    flag: String
-    type: String
+type GraphEdge {
+  id: ID!
+  sourceId: ID!
+  targetId: ID!
+  type: String!
+  label: String!
+  confidence: Float
+  reviewStatus: String
 }
 
-# Address has no `name` (PLAN.md §3) so it does not implement Node.
-type Address {
-    id: ID!
-    country: String!
-    city: String
-    raw: String
+type GraphSlice {
+  nodes: [GraphNode!]!
+  edges: [GraphEdge!]!
+  truncated: Boolean!
 }
 
-type Source {
-    id: ID!
-    list: String!
-    url: String!
-    retrievedAt: String!
+type EntityDetail {
+  node: GraphNode!
+  normalizedName: String
+  datesOfBirth: [String!]!
+  nationalities: [String!]!
+  jurisdiction: String
+  registrationNumber: String
+  imo: String
+  flag: String
+  programs: [String!]!
+  sourceRecords: [SourceRecordSummary!]!
+  matches: [MatchExplanation!]!
 }
 
-type SearchResult {
-    node: Node!
-    score: Float
+type SourceRecordSummary {
+  id: ID!
+  datasetId: ID!
+  datasetName: String!
+  externalId: String!
+  retrievedAt: String
+  recordHash: String!
+  active: Boolean!
 }
 
-type InvestigationEntity {
-    entityId: ID!
-    annotation: String
-    x: Float
-    y: Float
-}
-
-type Investigation {
-    id: ID!
-    title: String!
-    createdAt: String!
-    entities: [InvestigationEntity!]!
-}
-
-input LayoutItem {
-    entityId: ID!
-    x: Float!
-    y: Float!
-}
-
-type PathResult {
-    nodes: [Node!]!
-    edges: [PathEdge!]!
-    length: Int!
-}
-
-type PathEdge {
-    fromId: ID!
-    toId: ID!
-    type: String!
+type MatchExplanation {
+  edgeId: ID!
+  otherEntityId: ID!
+  type: String!
+  score: Float
+  reasons: [String!]!
+  algorithmVersion: String
+  decidedAt: String
+  decisionSource: String
+  reviewStatus: String
 }

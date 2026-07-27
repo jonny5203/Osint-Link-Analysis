@@ -4,36 +4,128 @@ import { gql } from "@apollo/client";
 
 export const SEARCH = gql`
   query Search($term: String!, $limit: Int) {
-    search(term: $term, limit: $limit) {
+    searchEntities(term: $term, limit: $limit) {
+      score
       node {
         id
-        name
-        labels
+        kind
+        displayName
+        aliases
+        sanctioned
+        datasetIds
       }
-      score
     }
   }
 `;
 
-export const NEIGHBORS = gql`
-  query Neighbors($id: ID!, $limit: Int) {
-    neighbors(id: $id, limit: $limit) {
-      id
-      name
-      labels
+export const ENTITY = gql`
+  query Entity($id: ID!) {
+    entity(id: $id) {
+      node {
+        id
+        kind
+        displayName
+        aliases
+        sanctioned
+        datasetIds
+      }
+      normalizedName
+      datesOfBirth
+      nationalities
+      jurisdiction
+      registrationNumber
+      imo
+      flag
+      programs
+      sourceRecords {
+        id
+        datasetId
+        datasetName
+        externalId
+        retrievedAt
+        recordHash
+        active
+      }
+      matches {
+        edgeId
+        otherEntityId
+        type
+        score
+        reasons
+        algorithmVersion
+        decidedAt
+        decisionSource
+        reviewStatus
+      }
+    }
+  }
+`;
+
+export const NEIGHBORHOOD = gql`
+  query Neighborhood(
+    $id: ID!
+    $depth: Int
+    $nodeLimit: Int
+    $edgeLimit: Int
+  ) {
+    neighborhood(
+      id: $id
+      depth: $depth
+      nodeLimit: $nodeLimit
+      edgeLimit: $edgeLimit
+    ) {
+      nodes {
+        id
+        kind
+        displayName
+        aliases
+        sanctioned
+        datasetIds
+      }
+      edges {
+        id
+        sourceId
+        targetId
+        type
+        label
+        confidence
+        reviewStatus
+      }
+      truncated
     }
   }
 `;
 
 export const SHORTEST_PATH = gql`
-  query ShortestPath($fromId: ID!, $toId: ID!, $maxHops: Int) {
-    shortestPath(fromId: $fromId, toId: $toId, maxHops: $maxHops) {
+  query ShortestPath(
+    $fromId: ID!, 
+    $toId: ID!, 
+    $maxHops: Int
+  ) {
+    shortestPath(
+      fromId: $fromId, 
+      toId: $toId, 
+      maxHops: $maxHops
+    ) {
       nodes {
         id
-        name
-        labels
+        kind
+        displayName
+        aliases
+        sanctioned
+        datasetIds
       }
-      length
+      edges {
+        id
+        sourceId
+        targetId
+        type
+        label
+        confidence
+        reviewStatus
+      }
+      truncated
     }
   }
 `;
+

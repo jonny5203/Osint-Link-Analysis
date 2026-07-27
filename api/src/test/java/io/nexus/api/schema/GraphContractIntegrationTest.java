@@ -21,6 +21,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.neo4j.Neo4jContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import io.nexus.api.query.dto.GraphEdgeDto;
+import io.nexus.api.query.dto.GraphSliceDto;
+import io.nexus.api.query.input_validation.GraphQueryService;
+
 @Testcontainers
 class GraphContractIntegrationTest {
     private static final String NEO4J_IMAGE =
@@ -74,6 +78,7 @@ class GraphContractIntegrationTest {
             assertInvariants(session);
             assertAveryFullTextSearch(session);
             assertAveryToAuroraPath(session);
+            assertAveryNeighborhood(driver, session);
         }
     }
 
@@ -209,6 +214,92 @@ class GraphContractIntegrationTest {
         assertThat(paths).containsExactly(
             List.of("OWNS", "CONTROLS", "OWNS")
         );
+    }
+
+    private static void assertAveryNeighborhood(
+        Driver driver,
+        Session session
+    ) {
+        session.run("""
+            MATCH (avery:Entity {id: "fixture:entity:avery"})
+            MATCH (variant:Entity {id: "fixture:entity:avery-variant"})
+            MERGE (avery)-[:INTERNAL_TEST]->(variant)
+            """).consume();
+
+        try {
+            GraphQueryService service = new GraphQueryService(driver);
+
+            GraphSliceDto complete = service.neighborhood(
+                "fixture:entity:avery",
+                1,
+                100,
+                200
+            );
+
+            assertThat(complete.nodes())
+                .extracting(node -> node.id())
+                .containsExactly(
+                    "fixture:entity:avery",
+                    "fixture:address:avery:0",
+                    "fixture:entity:northstar"
+                );
+            assertThat(complete.edges())
+                .extracting(GraphEdgeDto::type)
+                .containsExactly("LOCATED_AT", "OWNS");
+            assertThat(complete.truncated()).isFalse();
+            assertAllEdgeEndpointsArePresent(complete);
+
+            GraphSliceDto nodeLimited = service.neighborhood(
+                "fixture:entity:avery",
+                1,
+                2,
+                200
+            );
+
+            assertThat(nodeLimited.nodes())
+                .extracting(node -> node.id())
+                .containsExactly(
+                    "fixture:entity:avery",
+                    "fixture:address:avery:0"
+                );
+            assertThat(nodeLimited.edges())
+                .extracting(GraphEdgeDto::type)
+                .containsExactly("LOCATED_AT");
+            assertThat(nodeLimited.truncated()).isTrue();
+            assertAllEdgeEndpointsArePresent(nodeLimited);
+
+            GraphSliceDto edgeLimited = service.neighborhood(
+                "fixture:entity:avery",
+                1,
+                100,
+                1
+            );
+
+            assertThat(edgeLimited.edges()).hasSize(1);
+            assertThat(edgeLimited.truncated()).isTrue();
+            assertAllEdgeEndpointsArePresent(edgeLimited);
+        } finally {
+            session.run("""
+                MATCH
+                    (:Entity {id: "fixture:entity:avery"})
+                    -[relationship:INTERNAL_TEST]-
+                    (:Entity {id: "fixture:entity:avery-variant"})
+                DELETE relationship
+                """).consume();
+        }
+    }
+
+    private static void assertAllEdgeEndpointsArePresent(
+        GraphSliceDto slice
+    ) {
+        List<String> nodeIds = slice.nodes().stream()
+            .map(node -> node.id())
+            .toList();
+
+        assertThat(slice.edges()).allSatisfy(edge -> {
+            assertThat(nodeIds).contains(edge.sourceId());
+            assertThat(nodeIds).contains(edge.targetId());
+        });
     }
 
     private static void runScript(

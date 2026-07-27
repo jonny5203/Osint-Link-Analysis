@@ -8,4 +8,4 @@ spring:
       password: ${SPRING_NEO4J_PASSWORD}
   graphql:
     graphiql:
-      enabled: false
+      enabled: true
