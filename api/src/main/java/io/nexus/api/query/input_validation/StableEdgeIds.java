@@ -36,7 +36,7 @@ public class StableEdgeIds {
                 .digest(
                     canonicalTuple.getBytes(StandardCharsets.UTF_8)
                 );
-            return "edge:v1" + HexFormat.of().formatHex(hash);
+            return "edge:v1:" + HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(
                 "SHA-256 is unavailable",

@@ -13,6 +13,7 @@ jobs:
 
     env:
       NEO4J_PASSWORD: verification-only-password
+      ANALYST_USERNAME: analyst
       ANALYST_PASSWORD: verification-only-password
 
     steps:

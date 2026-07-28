@@ -126,7 +126,7 @@ public class GraphQueryService {
         RETURN entity, datasetIds, sanctioned, programLists
     """;
 
-    static final List<String> ANALYST_RELATIONSHIP_TYPES ? List.of(
+    static final List<String> ANALYST_RELATIONSHIP_TYPES = List.of(
         "OWNS",
         "CONTROLS",
         "OFFICER_OF",
