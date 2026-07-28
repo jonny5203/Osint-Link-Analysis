@@ -1,3 +1,6 @@
+ANALYST_USERNAME: test-analyst
+ANALYST_PASSWORD: test-only-analyst-password
+
 spring:
   neo4j:
     uri: bolt://127.0.0.1:1

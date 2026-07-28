@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+export NEO4J_PASSWORD="${NEO4J_PASSWORD:-verification-only-password}"
+export ANALYST_USERNAME="${ANALYST_USERNAME:-analyst}"
+export ANALYST_PASSWORD="${ANALYST_PASSWORD:-verification-only-password}"
+
 repository_root="$(
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
   pwd
