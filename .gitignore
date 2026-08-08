@@ -10,8 +10,13 @@
 *.tsbuildinfo
 core.*
 
-# Local unpublished documentation
+# Product documentation (other local notes remain unpublished)
 /docs/*
+!/docs/architecture.md
+!/docs/data-model.md
+!/docs/demo-scenario.md
+!/docs/development.md
+!/docs/security-and-limitations.md
 !/docs/verification/
 /docs/verification/*
 !/docs/verification/phase-4.md
