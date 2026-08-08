@@ -635,7 +635,7 @@ It must not dump arbitrary raw properties to the browser.
 - [~] **Phase 1** — reproducible green skeleton
 - [~] **Phase 2** — graph contract and deterministic fixture
 - [ ] **Phase 3** — bounded authenticated read API
-- [ ] **Phase 4** — search-and-expand graph explorer
+- [x] **Phase 4** — search-and-expand graph explorer
 - [ ] **Phase 5** — shared import pipeline and OFAC
 - [ ] **Phase 6** — EU and UN imports
 - [ ] **Phase 7** — evaluated non-destructive resolution
@@ -1054,52 +1054,52 @@ expand relationships using deterministic data.
 
 ### Tasks
 
-- [ ] **P4.1 — Implement runtime credential entry.** Present a local-demo sign-in form.
+- [x] **P4.1 — Implement runtime credential entry.** Present a local-demo sign-in form.
   Keep the Basic authorization value in React memory, not source code, a Vite build-time
   variable, local storage, logs, or error messages. A page refresh may require sign-in
   again in v1.
-- [ ] **P4.2 — Configure same-origin GraphQL.** Development uses the Vite `/graphql`
+- [x] **P4.2 — Configure same-origin GraphQL.** Development uses the Vite `/graphql`
   proxy; packaged mode uses the web server proxy from Phase 10. Apollo always calls the
   relative `/graphql` path.
-- [ ] **P4.3 — Implement typed query documents.** Add search, entity detail,
+- [x] **P4.3 — Implement typed query documents.** Add search, entity detail,
   neighborhood, and shortest-path documents matching Phase 3. Compile-time types must
   cover node and edge fields.
-- [ ] **P4.4 — Implement debounced search.** Debounce 300 ms, do not query fewer than two
+- [x] **P4.4 — Implement debounced search.** Debounce 300 ms, do not query fewer than two
   trimmed characters, cancel/ignore stale results, support keyboard selection, and show
   loading/no-results/error states.
-- [ ] **P4.5 — Implement a pure graph merge adapter.** Given a `GraphSlice`, return unique
+- [x] **P4.5 — Implement a pure graph merge adapter.** Given a `GraphSlice`, return unique
   Cytoscape elements keyed by stable IDs. Re-adding the same slice changes no counts.
   Reject/log an edge whose endpoint is absent instead of rendering corrupt state.
-- [ ] **P4.6 — Own Cytoscape safely.** Create one Cytoscape instance in a React effect,
+- [x] **P4.6 — Own Cytoscape safely.** Create one Cytoscape instance in a React effect,
   store it in a ref, register event handlers once, and destroy it on unmount. Add fCoSE
   only if its version is locked and tested with the chosen Cytoscape version.
-- [ ] **P4.7 — Preserve layout during expansion.** Existing nodes keep their positions.
+- [x] **P4.7 — Preserve layout during expansion.** Existing nodes keep their positions.
   Place new nodes around the expanded node, then optionally run a constrained layout.
   Provide an explicit “Re-layout” action for moving the whole graph.
-- [ ] **P4.8 — Style semantic types.** Person, organization, vessel, and address have
+- [x] **P4.8 — Style semantic types.** Person, organization, vessel, and address have
   distinguishable shapes/colors plus text labels. Sanctions status uses an additional
   border/icon, not color alone. `POSSIBLE_MATCH` edges are visibly uncertain.
-- [ ] **P4.9 — Implement details.** Show display name, kind, aliases, datasets, source
+- [x] **P4.9 — Implement details.** Show display name, kind, aliases, datasets, source
   record IDs, retrieval time, and identity-link explanation. Include the “lead, not
   fact” notice for possible matches.
-- [ ] **P4.10 — Test state behavior.** Unit-test graph deduplication, stale search
+- [x] **P4.10 — Test state behavior.** Unit-test graph deduplication, stale search
   responses, missing endpoints, authentication-header injection, and layout preservation.
-- [ ] **P4.11 — Add a browser smoke test.** Against fixture data: sign in, search Avery,
+- [x] **P4.11 — Add a browser smoke test.** Against fixture data: sign in, search Avery,
   add the person, expand once, assert an organization node and `OWNS` edge are visible,
   and open provenance detail.
 
 ### Acceptance criteria
 
-- [ ] `npm run lint`, `npm run test -- --run`, `npm run typecheck`, and
+- [x] `npm run lint`, `npm run test -- --run`, `npm run typecheck`, and
   `npm run build` all pass.
-- [ ] Search does not send a request for a one-character term.
-- [ ] Adding or expanding the same node twice creates no duplicate graph elements.
-- [ ] The browser displays both relationship type and direction.
-- [ ] Existing node positions remain unchanged during incremental expansion unless the
+- [x] Search does not send a request for a one-character term.
+- [x] Adding or expanding the same node twice creates no duplicate graph elements.
+- [x] The browser displays both relationship type and direction.
+- [x] Existing node positions remain unchanged during incremental expansion unless the
   user invokes “Re-layout.”
-- [ ] No password string appears in built JavaScript, browser storage, or test snapshots.
-- [ ] The automated browser smoke test passes against a fresh fixture database.
-- [ ] `docs/verification/phase-4.md` contains the test result and one screenshot.
+- [x] No password string appears in built JavaScript, browser storage, or test snapshots.
+- [x] The automated browser smoke test passes against a fresh fixture database.
+- [x] `docs/verification/phase-4.md` contains the test result and one screenshot.
 
 ### Failure guidance
 
