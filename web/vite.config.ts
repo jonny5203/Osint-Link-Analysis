@@ -6,12 +6,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    include: ["src/**/*.test.{ts,tsx}"],
   },
   server: {
     port: 5173,
     proxy: {
       "/graphql": {
-        target: "http://localhost:8080",
+        target: process.env.NEXUS_API_TARGET ?? "http://localhost:8080",
         changeOrigin: true,
       },
     },

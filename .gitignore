@@ -5,11 +5,17 @@
 /api/target/
 /web/dist/
 /web/node_modules/
+/web/playwright-report/
+/web/test-results/
 *.tsbuildinfo
 core.*
 
 # Local unpublished documentation
-/docs/
+/docs/*
+!/docs/verification/
+/docs/verification/*
+!/docs/verification/phase-4.md
+!/docs/verification/phase-4.png
 /blog/
 
 # Python
