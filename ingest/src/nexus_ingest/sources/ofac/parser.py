@@ -1,16 +1,18 @@
-"""Parse the OFAC SDN XML into normalized records (PLAN.md T3.3)."""
+"""Parse the OFAC SDN XML into shared NormalizedRecords.
+
+The live list uses textual sdnType values (Individual, Entity, Vessel,
+Aircraft); Aircraft entries are counted as unsupported, never silently
+dropped. Parsing itself is not implemented yet.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
 
-from nexus_ingest.models import SdnRecord
+from nexus_ingest.models import NormalizedRecord
 
 
-def parse_sdn(xml_path: Path) -> Iterator[SdnRecord]:
-    """Stream-parse the XML with lxml.etree.iterparse (do not load the whole file).
-
-    Map <SDNType> 1->Person, 2->Organization, 3->Vessel (4=Aircraft, out of scope).
-    """
-    raise NotImplementedError("T3.3")
+def parse_sdn(xml_path: Path) -> Iterator[NormalizedRecord]:
+    """Stream the XML with lxml.etree.iterparse; never load the whole file."""
+    raise NotImplementedError("parse_sdn: OFAC SDN XML parsing not implemented yet")
