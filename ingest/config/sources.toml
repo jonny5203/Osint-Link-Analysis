@@ -1,0 +1,23 @@
+# Per source ingestion settings.
+#
+# The table name is what the CLI accepts, like, nexus-ingest source run ofac
+# dataset_id inside the table is the stable graph identity
+# (Dataset {id: "ofac-sdn"}). Change URLs and limits here, not in Python.
+
+version = 1
+
+[sources.ofac]
+dataset_id = "ofac-sdn"
+publisher = "U.S Department of the Treasury - Office of Foreign Assets Control"
+landing_url = "https://ofac.treasury.gov/sanctions-list-service"
+download_url = "https://www.treasury.gov/ofac/downloads/sdn.xml"
+expected_root_local_name = "sdnList"
+max_bytes = 104857600
+timeout_seconds = 120
+parser_format_version = 1
+
+allowed_redirect_hosts = [
+  "www.treasury.gov",
+  "sanctionslistservice.ofac.treas.gov",
+  "wc2h-sls-prod-public-published.s3.us-gov-west-1.amazonaws.com",
+]
