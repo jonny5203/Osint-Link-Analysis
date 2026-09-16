@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- One entry missing its uid: the parser must count it as failed and keep
+     going. Fictional data. -->
+<sdnList xmlns="http://tempuri.org/sdnList.xsd">
+  <sdnEntry>
+    <lastName>GHOST ENTRY</lastName>
+    <sdnType>Individual</sdnType>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>21001</uid>
+    <lastName>SOLID TRADING GMBH</lastName>
+    <sdnType>Entity</sdnType>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>22001</uid>
+    <lastName>TEST AIRCRAFT THREE</lastName>
+    <sdnType>Aircraft</sdnType>
+  </sdnEntry>
+</sdnList>

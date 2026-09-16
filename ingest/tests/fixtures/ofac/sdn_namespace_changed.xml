@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Same element shapes as sdn_happy.xml but under a made-up namespace URI,
+     proving lookups match local names only. Fictional data. -->
+<sdnList xmlns="http://example.invalid/2026/ns/sdnList.xsd">
+  <sdnEntry>
+    <uid>11001</uid>
+    <firstName>Nova</firstName>
+    <lastName>HARBOR</lastName>
+    <sdnType>Individual</sdnType>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>13001</uid>
+    <lastName>MERIDIAN STAR</lastName>
+    <sdnType>Vessel</sdnType>
+    <idList>
+      <id>
+        <uid>1</uid>
+        <idType>Vessel Registration Identification</idType>
+        <idNumber>9990002</idNumber>
+      </id>
+    </idList>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>14001</uid>
+    <lastName>TEST AIRCRAFT TWO</lastName>
+    <sdnType>Aircraft</sdnType>
+  </sdnEntry>
+</sdnList>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fictional names, IDs, and programs. Mirrors the legacy SDN.XML element
+     shapes with the current default namespace. -->
+<sdnList xmlns="http://tempuri.org/sdnList.xsd">
+  <publshInformation>
+    <Publish_Date>09/01/2026</Publish_Date>
+  </publshInformation>
+  <sdnEntry>
+    <uid>10001</uid>
+    <firstName>Avery</firstName>
+    <lastName>DER BERG</lastName>
+    <title>Chief Executive</title>
+    <sdnType>Individual</sdnType>
+    <remarks>Provided false passport 2024.</remarks>
+    <akaList>
+      <aka>
+        <uid>1</uid>
+        <type>a.k.a.</type>
+        <category>strong</category>
+        <firstName>Avery</firstName>
+        <lastName>DERBERG</lastName>
+      </aka>
+    </akaList>
+    <addressList>
+      <address>
+        <uid>1</uid>
+        <address>1 Harbour Rd</address>
+        <city>Portville</city>
+        <country>Norway</country>
+      </address>
+    </addressList>
+    <idList>
+      <id>
+        <uid>1</uid>
+        <idType>Passport</idType>
+        <idNumber>P1234567</idNumber>
+        <idCountry>Norway</idCountry>
+      </id>
+    </idList>
+    <programList>
+      <program>PROGRAM ALPHA</program>
+      <program>PROGRAM BETA</program>
+    </programList>
+    <nationalityList>
+      <nationality>
+        <uid>1</uid>
+        <country>Norway</country>
+      </nationality>
+    </nationalityList>
+    <dateOfBirthList>
+      <dateOfBirth>
+        <uid>1</uid>
+        <date>18 Mar 1980</date>
+      </dateOfBirth>
+      <dateOfBirth>
+        <uid>2</uid>
+        <date>1976</date>
+      </dateOfBirth>
+    </dateOfBirthList>
+    <placeOfBirthList>
+      <placeOfBirth>
+        <uid>1</uid>
+        <placeOfBirth>Portville</placeOfBirth>
+      </placeOfBirth>
+    </placeOfBirthList>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>20001</uid>
+    <lastName>AURORA SHIPPING LTD</lastName>
+    <sdnType>Entity</sdnType>
+    <addressList>
+      <address>
+        <uid>1</uid>
+        <address>2 Quay St</address>
+        <city>Portville</city>
+        <postalCode>1000</postalCode>
+        <country>Norway</country>
+      </address>
+    </addressList>
+    <programList>
+      <program>PROGRAM ALPHA</program>
+    </programList>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>30001</uid>
+    <lastName>AURORA</lastName>
+    <sdnType>Vessel</sdnType>
+    <idList>
+      <id>
+        <uid>1</uid>
+        <idType>Vessel Registration Identification</idType>
+        <idNumber>9990001</idNumber>
+        <idCountry>Norway</idCountry>
+      </id>
+    </idList>
+    <programList>
+      <program>PROGRAM BETA</program>
+    </programList>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>40001</uid>
+    <lastName>TEST AIRCRAFT ONE</lastName>
+    <sdnType>Aircraft</sdnType>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>50001</uid>
+    <lastName>MINIMAL HOLDING SA</lastName>
+    <sdnType>Entity</sdnType>
+  </sdnEntry>
+  <sdnEntry>
+    <uid>60001</uid>
+    <lastName>MERIDIAN</lastName>
+    <sdnType>Individual</sdnType>
+  </sdnEntry>
+</sdnList>
