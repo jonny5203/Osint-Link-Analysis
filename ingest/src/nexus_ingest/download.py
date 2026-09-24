@@ -14,9 +14,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+from lxml import etree
 
 from nexus_ingest.models import FetchResult
 from nexus_ingest.source_config import SourceConfig
+from nexus_ingest.sources.xml_stream import local_name
 
 NEXUS_USER_AGENT = "nexus-ingest/0.1 (local OSINT demo)"
 CHUNK_SIZE = 64 * 1024
@@ -64,22 +66,109 @@ def fetch_snapshot(
 
 def _snapshot_from_file(config: SourceConfig, source_file: Path) -> FetchResult:
     """Hash an existing local file. No cache copy, no manifest, no network."""
-    hasher = hashlib.sha256()
-    byte_count = 0
-    with source_file.open("rb") as handle:
-        while chunk := handle.read(CHUNK_SIZE):
-            hasher.update(chunk)
-            byte_count += len(chunk)
-    if byte_count > config.max_bytes:
-        raise DownloadError(
-            f"{source_file} is {byte_count} bytes, over the {config.max_bytes} cap"
-        )
+    byte_count, sha256 = _measure_snapshot(config, source_file)
+    _validate_snapshot_xml(config, source_file)
     return FetchResult(
         dataset_id=config.dataset_id,
         byte_count=byte_count,
-        sha256=hasher.hexdigest(),
+        sha256=sha256,
+        snapshot_path=source_file.resolve(),
         from_file=True,
     )
+
+
+def _measure_snapshot(config: SourceConfig, snapshot: Path) -> tuple[int, str]:
+    """Count and hash actual bytes, stopping when the configured cap is exceeded."""
+    hasher = hashlib.sha256()
+    byte_count = 0
+    with snapshot.open("rb") as handle:
+        while chunk := handle.read(CHUNK_SIZE):
+            byte_count += len(chunk)
+            if byte_count > config.max_bytes:
+                raise DownloadError(
+                    f"{config.dataset_id}: {snapshot} exceeded the "
+                    f"{config.max_bytes} byte cap"
+                )
+            hasher.update(chunk)
+    return byte_count, hasher.hexdigest()
+
+
+def _validate_snapshot_xml(config: SourceConfig, snapshot: Path) -> None:
+    """Reject content that cannot be used as this source's XML snapshot."""
+    root = None
+
+    try:
+        with snapshot.open("rb") as source:
+            for event, element in etree.iterparse(
+                source,
+                events=("start", "end"),
+                load_dtd=False,
+                no_network=True,
+                resolve_entities=False,
+                recover=False,
+                huge_tree=False,
+            ):
+                if event == "start":
+                    if root is None:
+                        root = element
+                        actual_root = local_name(root.tag)
+                        if actual_root != config.expected_root_local_name:
+                            raise DownloadError(
+                                f"{config.dataset_id}: expected XML root "
+                                f"{config.expected_root_local_name}, "
+                                f"got {actual_root!r}"
+                            )
+                    continue
+
+                # Release completed elements and earlier siblings so validation
+                # does not retain the entire document in memory.
+                element.clear()
+                parent = element.getparent()
+                if parent is not None:
+                    while element.getprevious() is not None:
+                        del parent[0]
+
+            if root is None:
+                raise DownloadError(f"{config.dataset_id}: XML document is empty")
+
+            if root.getroottree().docinfo.doctype:
+                raise DownloadError(f"{config.dataset_id}: XML DOCTYPE is not allowed")
+
+    except etree.XMLSyntaxError as error:
+        raise DownloadError(f"{config.dataset_id}: malformed XML: {error}") from error
+
+
+def _require_cache_integrity(
+    config: SourceConfig,
+    snapshot: Path,
+    manifest: dict,
+    *,
+    byte_count: int,
+    sha256: str,
+) -> None:
+    """Reject a cached snapshot whose identity disagrees with its measured bytes."""
+    if snapshot.stem != sha256:
+        raise DownloadError(
+            f"{config.dataset_id}: cached filename does not match measured sha256"
+        )
+
+    expected_fields = {
+        "sha256": sha256,
+        "byte_count": byte_count,
+        "dataset_id": config.dataset_id,
+        "parser_format_version": config.parser_format_version,
+    }
+    for field, expected in expected_fields.items():
+        if field not in manifest:
+            continue
+        actual = manifest[field]
+        # JSON booleans and floats can compare equal to integers in Python.
+        # Metadata must agree in type as well as value before cache reuse.
+        if type(actual) is not type(expected) or actual != expected:
+            raise DownloadError(
+                f"{config.dataset_id}: cached {field} does not match "
+                f"expected value {expected!r}"
+            )
 
 
 def _find_cached_snapshot(
@@ -95,13 +184,27 @@ def _find_cached_snapshot(
     snapshots = sorted(day_dir.glob("*.xml"))
     if not snapshots:
         return None
-    # Hex names sort deterministically, so "the" snapshot of a day is stable.
-    snapshot = snapshots[-1]
+    # Prefer the most recently modified snapshot after a forced refresh.
+    # Sorted filenames keep equal-timestamp selection deterministic.
+    latest_time: float = 0.0
+    latest_time_index = 0
+    for index, s in enumerate(snapshots):
+        if s.stat().st_mtime > latest_time:
+            latest_time = s.stat().st_mtime
+            latest_time_index = index
+
+    snapshot = snapshots[latest_time_index]
+
     manifest = _load_manifest(snapshot.with_suffix(".json")) or {}
+    byte_count, sha256 = _measure_snapshot(config, snapshot)
+    _require_cache_integrity(
+        config, snapshot, manifest, byte_count=byte_count, sha256=sha256
+    )
+    _validate_snapshot_xml(config, snapshot)
     return FetchResult(
         dataset_id=config.dataset_id,
-        byte_count=manifest.get("byte_count", snapshot.stat().st_size),
-        sha256=snapshot.stem,
+        byte_count=byte_count,
+        sha256=sha256,
         snapshot_path=snapshot,
         requested_url=manifest.get("requested_url"),
         final_url=manifest.get("final_url"),
@@ -170,7 +273,7 @@ def _download_to_cache(
                 try:
                     first_chunk = True
                     with temp_path.open("wb") as sink:
-                        for chunk in response.iter_bytes():
+                        for chunk in response.iter_bytes(chunk_size=CHUNK_SIZE):
                             if first_chunk:
                                 first_chunk = False
                                 if _looks_like_html(chunk):
@@ -185,6 +288,9 @@ def _download_to_cache(
                                 raise DownloadError(
                                     f"{url} exceeded the {config.max_bytes} byte cap"
                                 )
+                    # Validate before publication so rejected bytes cannot become
+                    # a cached snapshot or acquire a manifest.
+                    _validate_snapshot_xml(config, temp_path)
                 except BaseException:
                     # Kill the partial file on any failure, including
                     # Ctrl-C. A crashed download must leave no usable file.
@@ -266,7 +372,7 @@ def _looks_like_html(first_chunk: bytes) -> bool:
 
 def _load_manifest(manifest_path: Path) -> dict | None:
     """Read a manifest. A missing or broken manifest in the cache is not
-    fatal: we fall back to the file's own size and skip the URL fields."""
+    fatal: we measure the file's bytes and omit unavailable URL fields."""
     if not manifest_path.exists():
         return None
     try:

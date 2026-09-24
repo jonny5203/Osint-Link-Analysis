@@ -4,13 +4,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 import pytest
 
-from nexus_ingest.download import DownloadError, _host_allowed, fetch_snapshot
+from nexus_ingest.download import (
+    DownloadError,
+    _host_allowed,
+    _require_cache_integrity,
+    _validate_snapshot_xml,
+    fetch_snapshot,
+)
 from nexus_ingest.source_config import SourceConfig
 
 NOW = datetime(2026, 8, 30, 12, 0, 0, tzinfo=timezone.utc)
@@ -225,4 +232,238 @@ def test_local_file_input_hashes_without_network_or_cache(tmp_path: Path) -> Non
     assert result.from_cache is False
     assert result.sha256 == BODY_SHA
     assert result.byte_count == len(BODY)
-    assert result.snapshot_path is None
+    assert result.snapshot_path == fixture.resolve()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"<sdnList/>",
+        b'<sdnList xmlns="urn:changed"/>',
+        b'<s:sdnList xmlns:s="urn:changed"><s:sdnEntry/></s:sdnList>',
+    ],
+)
+def test_snapshot_validation_accepts_root_local_name(
+    tmp_path: Path, body: bytes
+) -> None:
+    snapshot = tmp_path / "source.xml"
+    snapshot.write_bytes(body)
+
+    assert _validate_snapshot_xml(_config(), snapshot) is None
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"",
+        b" \n\t ",
+        b"<unexpected/>",
+        b"<sdnList><broken></sdnList>",
+        b"<sdnList/>trailing-junk",
+        b"<!DOCTYPE sdnList><sdnList/>",
+        b'<!DOCTYPE sdnList [<!ENTITY name "expanded">]><sdnList>&name;</sdnList>',
+        b'<!DOCTYPE sdnList SYSTEM "https://example.invalid/source.dtd"><sdnList/>',
+    ],
+)
+def test_snapshot_validation_rejects_invalid_documents(
+    tmp_path: Path, body: bytes
+) -> None:
+    snapshot = tmp_path / "source.xml"
+    snapshot.write_bytes(body)
+
+    with pytest.raises(DownloadError, match="ofac-sdn"):
+        _validate_snapshot_xml(_config(), snapshot)
+
+
+@pytest.mark.parametrize("entry_point", ["download", "cache", "file"])
+def test_every_fetch_path_validates_the_whole_document(
+    tmp_path: Path, entry_point: str
+) -> None:
+    body = b"<sdnList><sdnEntry/></sdnList>trailing-junk"
+    root = tmp_path / "raw"
+    source_file = None
+    transport = _refusing_transport()
+    if entry_point == "download":
+        transport = _transport({XML_URL: httpx.Response(200, content=body)}, [])
+    elif entry_point == "cache":
+        snapshot = (
+            root / "ofac" / "20260830" / f"{hashlib.sha256(body).hexdigest()}.xml"
+        )
+        snapshot.parent.mkdir(parents=True)
+        snapshot.write_bytes(body)
+    else:
+        source_file = tmp_path / "input.xml"
+        source_file.write_bytes(body)
+
+    with pytest.raises(DownloadError, match="ofac-sdn"):
+        fetch_snapshot(
+            _config(),
+            now=NOW,
+            source_file=source_file,
+            transport=transport,
+            raw_root=root,
+        )
+
+    if entry_point == "download":
+        assert list(root.rglob("*.xml")) == []
+        assert list(root.rglob("*.json")) == []
+        assert list(root.rglob(".partial-*")) == []
+
+
+@pytest.mark.parametrize("manifest_body", [None, "not-json", "[]", "{}"])
+def test_cache_without_usable_manifest_is_measured_and_validated(
+    tmp_path: Path, manifest_body: str | None
+) -> None:
+    root = tmp_path / "raw"
+    snapshot = root / "ofac" / "20260830" / f"{BODY_SHA}.xml"
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_bytes(BODY)
+    if manifest_body is not None:
+        snapshot.with_suffix(".json").write_text(manifest_body)
+
+    result = fetch_snapshot(
+        _config(), now=NOW, transport=_refusing_transport(), raw_root=root
+    )
+
+    assert result.from_cache is True
+    assert result.sha256 == BODY_SHA
+    assert result.byte_count == len(BODY)
+    assert result.final_url is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("sha256", "0" * 64),
+        ("sha256", None),
+        ("byte_count", len(BODY) + 1),
+        ("byte_count", str(len(BODY))),
+        ("byte_count", float(len(BODY))),
+        ("byte_count", True),
+        ("dataset_id", "un-consolidated"),
+        ("parser_format_version", 2),
+        ("parser_format_version", "1"),
+        ("parser_format_version", 1.0),
+        ("parser_format_version", True),
+    ],
+)
+def test_cache_integrity_rejects_conflicting_manifest_fields(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    with pytest.raises(DownloadError) as error:
+        _require_cache_integrity(
+            _config(),
+            tmp_path / f"{BODY_SHA}.xml",
+            {field: value},
+            byte_count=len(BODY),
+            sha256=BODY_SHA,
+        )
+    assert "ofac-sdn" in str(error.value)
+    assert field in str(error.value)
+
+
+def test_cache_integrity_accepts_matching_manifest(tmp_path: Path) -> None:
+    manifest = {
+        "dataset_id": "ofac-sdn",
+        "sha256": BODY_SHA,
+        "byte_count": len(BODY),
+        "parser_format_version": 1,
+    }
+
+    assert (
+        _require_cache_integrity(
+            _config(),
+            tmp_path / f"{BODY_SHA}.xml",
+            manifest,
+            byte_count=len(BODY),
+            sha256=BODY_SHA,
+        )
+        is None
+    )
+
+
+def test_cache_rejects_changed_bytes_under_old_digest(tmp_path: Path) -> None:
+    root = tmp_path / "raw"
+    snapshot = root / "ofac" / "20260830" / f"{BODY_SHA}.xml"
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_bytes(b"<sdnList/>")
+
+    with pytest.raises(DownloadError, match="filename"):
+        fetch_snapshot(
+            _config(), now=NOW, transport=_refusing_transport(), raw_root=root
+        )
+    assert snapshot.read_bytes() == b"<sdnList/>"
+
+
+def test_rejected_refresh_preserves_cache_and_removes_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "raw"
+    snapshot = root / "ofac" / "20260830" / f"{BODY_SHA}.xml"
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_bytes(BODY)
+    manifest = snapshot.with_suffix(".json")
+    manifest.write_text('{"sha256": "preserve-existing-metadata"}')
+    previous_manifest = manifest.read_bytes()
+
+    def reject_snapshot(config: SourceConfig, path: Path) -> None:
+        assert config.dataset_id == "ofac-sdn"
+        assert path.name.startswith(".partial-")
+        assert path.read_bytes() == BODY
+        raise DownloadError("ofac-sdn: rejected by validator")
+
+    # Inject rejection to test publication/cleanup independently of XML parsing.
+    monkeypatch.setattr("nexus_ingest.download._validate_snapshot_xml", reject_snapshot)
+    with pytest.raises(DownloadError, match="rejected by validator"):
+        fetch_snapshot(
+            _config(),
+            force=True,
+            now=NOW,
+            transport=_transport({XML_URL: httpx.Response(200, content=BODY)}, []),
+            raw_root=root,
+        )
+
+    assert snapshot.read_bytes() == BODY
+    assert manifest.read_bytes() == previous_manifest
+    assert set(snapshot.parent.iterdir()) == {snapshot, manifest}
+
+
+def test_oversized_local_file_fails_without_creating_cache(tmp_path: Path) -> None:
+    source_file = tmp_path / "input.xml"
+    source_file.write_bytes(BODY)
+    root = tmp_path / "raw"
+
+    with pytest.raises(DownloadError, match="cap"):
+        fetch_snapshot(
+            _config(max_bytes=len(BODY) - 1),
+            source_file=source_file,
+            transport=_refusing_transport(),
+            raw_root=root,
+        )
+
+    assert not root.exists()
+
+
+def test_cache_prefers_newest_snapshot_over_digest_order(tmp_path: Path) -> None:
+    root = tmp_path / "raw"
+    day_dir = root / "ofac" / "20260830"
+    day_dir.mkdir(parents=True)
+    bodies = [BODY, b"<sdnList/>"]
+    snapshots = sorted((hashlib.sha256(body).hexdigest(), body) for body in bodies)
+    # The newer file sorts first by digest, so choosing the last name is wrong.
+    newest = None
+    for index, (digest, body) in enumerate(snapshots):
+        snapshot = day_dir / f"{digest}.xml"
+        snapshot.write_bytes(body)
+        timestamp = 200 - index * 100
+        os.utime(snapshot, (timestamp, timestamp))
+        if index == 0:
+            newest = snapshot
+
+    result = fetch_snapshot(
+        _config(), now=NOW, transport=_refusing_transport(), raw_root=root
+    )
+
+    assert result.from_cache is True
+    assert result.snapshot_path == newest
+    assert result.sha256 == newest.stem
